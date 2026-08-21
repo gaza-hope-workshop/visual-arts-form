@@ -1169,6 +1169,30 @@ function validateAll() {
     return errors;
 }
 
+// === فحص التكرار (طريقة JSONP اللي بتتجاوز قيود جوجل) ===
+function checkDuplicateId(id) {
+    return new Promise((resolve) => {
+        const cbName = 'jsonpCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+        const cleanup = () => {
+            delete window[cbName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            clearTimeout(timer);
+        };
+        window[cbName] = function(data) {
+            cleanup();
+            resolve(!!(data && data.exists));
+        };
+        const script = document.createElement('script');
+        script.src = GOOGLE_SCRIPT_URL + '?action=check&id=' + encodeURIComponent(id) + '&callback=' + cbName;
+        script.onerror = function() {
+            cleanup();
+            resolve(null); // تعذّر الفحص — منكمل عادي بدون ما نمنع الإرسال
+        };
+        const timer = setTimeout(() => { cleanup(); resolve(null); }, 6000);
+        document.body.appendChild(script);
+    });
+}
+
 // === إرسال النموذج ===
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -1182,9 +1206,27 @@ form.addEventListener('submit', async function(e) {
     }
 
     submitBtn.disabled = true;
-    document.querySelector('.btn-text').textContent = 'جارٍ الإرسال...';
+    document.querySelector('.btn-text').textContent = 'جارٍ التحقق...';
     document.querySelector('.btn-icon').style.display = 'none';
     spinner.style.display = 'block';
+
+    if (GOOGLE_SCRIPT_URL !== 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+        const isDuplicate = await checkDuplicateId(idInput.value);
+        if (isDuplicate === true) {
+            showToast('رقم الهوية هذا مسجل مسبقًا، لا يمكن التسجيل مرتين بنفس الرقم', 'error');
+            document.getElementById('idMsg').textContent = 'هذا الرقم مسجل مسبقًا';
+            document.getElementById('idMsg').className = 'field-msg';
+            idInput.className = 'invalid';
+            idInput.focus();
+            submitBtn.disabled = false;
+            document.querySelector('.btn-text').textContent = 'إرسال الاستمارة';
+            document.querySelector('.btn-icon').style.display = '';
+            spinner.style.display = 'none';
+            return;
+        }
+    }
+
+    document.querySelector('.btn-text').textContent = 'جارٍ الإرسال...';
 
     const waPrefix = document.querySelector('input[name="waPrefix"]:checked').value;
     const formData = {
@@ -1214,20 +1256,12 @@ form.addEventListener('submit', async function(e) {
             await new Promise(r => setTimeout(r, 1200));
             showSuccess();
         } else {
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
+            await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
+                mode: 'no-cors',
                 body: JSON.stringify(formData)
             });
-            const result = await response.json();
-            if (result && result.ok === false && result.reason === 'duplicate') {
-                showToast('رقم الهوية هذا مسجل مسبقًا، لا يمكن التسجيل مرتين بنفس الرقم', 'error');
-                document.getElementById('idMsg').textContent = 'هذا الرقم مسجل مسبقًا';
-                document.getElementById('idMsg').className = 'field-msg';
-                idInput.className = 'invalid';
-                idInput.focus();
-            } else {
-                showSuccess();
-            }
+            showSuccess();
         }
     } catch (error) {
         console.error('خطأ في الإرسال:', error);

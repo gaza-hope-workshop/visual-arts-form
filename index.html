@@ -118,21 +118,24 @@
 
         .ref-number-box {
             display: none;
-            flex-direction: column;
-            gap: 4px;
-            background: var(--accent-gold-pale);
-            border: 1.5px dashed var(--accent-gold);
+            align-items: center;
+            gap: 10px;
+            background: rgba(46,125,106,0.08);
+            border: 1.5px solid rgba(46,125,106,0.3);
             border-radius: 12px;
-            padding: 12px 18px;
+            padding: 12px 16px;
             margin-top: -4px;
+            animation: badgeGlow 2.2s ease-in-out infinite;
         }
-        .ref-number-box .ref-label { font-size: 0.78rem; color: var(--text-secondary); }
+        .ref-number-box .ref-icon { color: var(--accent-teal); flex-shrink: 0; width: 22px; height: 22px; }
+        .ref-number-box .ref-text { display: flex; flex-direction: column; gap: 2px; text-align: right; }
+        .ref-number-box .ref-label { font-size: 0.76rem; color: var(--text-secondary); }
         .ref-number-box .ref-value {
             font-family: 'Playfair Display', serif;
             font-weight: 700;
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             letter-spacing: 1px;
-            color: var(--accent-gold);
+            color: var(--accent-teal);
         }
 
         i svg { width: 1em; height: 1em; display: inline-block; vertical-align: -0.125em; }
@@ -825,6 +828,7 @@
         }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .success-check {
+            position: relative;
             width: 62px; height: 62px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--success), #219a52);
@@ -832,25 +836,34 @@
             font-size: 1.7rem;
             color: #fff;
             box-shadow: 0 8px 30px rgba(39,174,96,0.3);
-            animation: checkBounce 0.6s ease 0.2s both;
+            animation: checkBounce 0.6s ease 0.2s both, iconFloat 3s ease-in-out infinite 0.8s;
         }
+        .success-check .spark { position: absolute; width: 7px; height: 7px; border-radius: 50%; animation: sparkPulse 1.8s ease-in-out infinite; }
+        .success-check .spark.s1 { top: -6px; right: -4px; background: var(--accent-gold-light); animation-delay: 0s; }
+        .success-check .spark.s2 { bottom: 4px; left: -10px; background: var(--accent-teal); animation-delay: .5s; }
+        .success-check .spark.s3 { top: 14px; left: -12px; background: var(--accent-terracotta); animation-delay: 1s; }
         @keyframes checkBounce { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
-        .success-overlay h3 { font-size: 1.4rem; color: var(--accent-gold); }
+        .success-overlay h3 {
+            font-family: 'Cairo', sans-serif; font-weight: 900; font-size: 1.35rem;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-terracotta));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
         .success-overlay p { color: var(--text-secondary); font-size: 0.95rem; }
         .reset-btn {
             margin-top: 10px;
-            padding: 10px 32px;
-            background: transparent;
-            border: 1.5px solid var(--accent-gold);
-            color: var(--accent-gold);
-            border-radius: 10px;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-light));
+            border: none;
+            color: #fff;
+            border-radius: 12px;
             font-family: 'Cairo', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 0.95rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: transform 0.2s ease;
         }
-        .reset-btn:hover { background: var(--accent-gold); color: #fff; }
+        .reset-btn:hover { transform: translateY(-2px); }
 
         /* === تزيين زخرفي خفيف === */
         .deco-dot {
@@ -918,12 +931,20 @@
             <!-- طبقة النجاح -->
             <div class="success-overlay" id="successOverlay">
                 <div class="success-card">
-                    <div class="success-check"><i class="fas fa-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7"/></svg></i></div>
+                    <div class="success-check">
+                        <span class="spark s1"></span>
+                        <span class="spark s2"></span>
+                        <span class="spark s3"></span>
+                        <i class="fas fa-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7"/></svg></i>
+                    </div>
                     <h3>تم التسجيل بنجاح</h3>
                     <p>شكراً لك، سيتم التواصل معك قريباً</p>
                     <div class="ref-number-box" id="refNumberBox">
-                        <span class="ref-label">رقم تسجيلك المرجعي</span>
-                        <span class="ref-value" id="refNumberDisplay"></span>
+                        <svg class="ref-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/></svg>
+                        <span class="ref-text">
+                            <span class="ref-label">رقم تسجيلك المرجعي</span>
+                            <span class="ref-value" id="refNumberDisplay"></span>
+                        </span>
                     </div>
                     <button class="reset-btn" onclick="resetForm()">تسجيل جديد</button>
                 </div>
@@ -1118,7 +1139,7 @@
 
                 <!-- سؤال تحقق بسيط (CAPTCHA) -->
                 <div class="captcha-box">
-                    <div class="captcha-hint"> سؤال بسيط يضمن وصول طلبك بأمان </div>
+                    <div class="captcha-hint">سؤال بسيط يضمن وصول طلبك بأمان</div>
                     <label for="captchaAnswer">🔢 كم ناتج <span id="captchaQuestion"></span> ؟</label>
                     <input type="text" id="captchaAnswer" inputmode="numeric" placeholder="اكتب الناتج هنا">
                     <span class="field-msg" id="captchaMsg"></span>

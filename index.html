@@ -1187,10 +1187,33 @@ const formLoadTime = Date.now(); // لحماية بسيطة من البوتات 
 // === سؤال تحقق بسيط (CAPTCHA) ===
 let captchaAnswer = 0;
 function newCaptcha() {
-    const a = Math.floor(Math.random() * 8) + 2; // 2-9
-    const b = Math.floor(Math.random() * 8) + 2; // 2-9
-    captchaAnswer = a * b;
-    document.getElementById('captchaQuestion').textContent = a + ' × ' + b;
+    const ops = ['+', '-', '×', '÷'];
+    const op = ops[Math.floor(Math.random() * ops.length)];
+    let a, b, question;
+
+    if (op === '+') {
+        a = Math.floor(Math.random() * 8) + 2; // 2-9
+        b = Math.floor(Math.random() * 8) + 2; // 2-9
+        captchaAnswer = a + b;
+        question = a + ' + ' + b;
+    } else if (op === '-') {
+        a = Math.floor(Math.random() * 11) + 5; // 5-15
+        b = Math.floor(Math.random() * (a - 1)) + 1; // 1 إلى a-1، يضمن ناتج موجب
+        captchaAnswer = a - b;
+        question = a + ' - ' + b;
+    } else if (op === '÷') {
+        b = Math.floor(Math.random() * 4) + 2; // 2-5
+        captchaAnswer = Math.floor(Math.random() * 5) + 2; // 2-6
+        a = captchaAnswer * b; // يضمن قسمة بدون كسور
+        question = a + ' ÷ ' + b;
+    } else { // ×
+        a = Math.floor(Math.random() * 8) + 2; // 2-9
+        b = Math.floor(Math.random() * 8) + 2; // 2-9
+        captchaAnswer = a * b;
+        question = a + ' × ' + b;
+    }
+
+    document.getElementById('captchaQuestion').textContent = question;
     document.getElementById('captchaAnswer').value = '';
 }
 newCaptcha();
@@ -1431,7 +1454,7 @@ function checkRegistration(id) {
             cleanup();
             resolve(null); // تعذّر الفحص — منكمل عادي بدون ما نمنع الإرسال
         };
-        const timer = setTimeout(() => { cleanup(); resolve(null); }, 6000);
+        const timer = setTimeout(() => { cleanup(); resolve(null); }, 12000);
         document.body.appendChild(script);
     });
 }

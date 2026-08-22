@@ -116,6 +116,25 @@
         }
         .welcome-btn:hover { transform: translateY(-2px); }
 
+        .ref-number-box {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            background: var(--accent-gold-pale);
+            border: 1.5px dashed var(--accent-gold);
+            border-radius: 12px;
+            padding: 12px 18px;
+            margin-top: -4px;
+        }
+        .ref-number-box .ref-label { font-size: 0.78rem; color: var(--text-secondary); }
+        .ref-number-box .ref-value {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: 1px;
+            color: var(--accent-gold);
+        }
+
         i svg { width: 1em; height: 1em; display: inline-block; vertical-align: -0.125em; }
 
         body {
@@ -864,6 +883,10 @@
                     <div class="success-check"><i class="fas fa-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7"/></svg></i></div>
                     <h3>تم التسجيل بنجاح</h3>
                     <p>شكراً لك، سيتم التواصل معك قريباً</p>
+                    <div class="ref-number-box" id="refNumberBox">
+                        <span class="ref-label">رقم تسجيلك المرجعي</span>
+                        <span class="ref-value" id="refNumberDisplay"></span>
+                    </div>
                     <button class="reset-btn" onclick="resetForm()">تسجيل جديد</button>
                 </div>
             </div>
@@ -1298,8 +1321,8 @@ function validateAll() {
     return errors;
 }
 
-// === فحص التكرار (طريقة JSONP اللي بتتجاوز قيود جوجل) ===
-function checkDuplicateId(id) {
+// === فحص التكرار + جلب رقم التسجيل (طريقة JSONP اللي بتتجاوز قيود جوجل) ===
+function checkRegistration(id) {
     return new Promise((resolve) => {
         const cbName = 'jsonpCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
         const cleanup = () => {
@@ -1309,7 +1332,7 @@ function checkDuplicateId(id) {
         };
         window[cbName] = function(data) {
             cleanup();
-            resolve(!!(data && data.exists));
+            resolve(data || null);
         };
         const script = document.createElement('script');
         script.src = GOOGLE_SCRIPT_URL + '?action=check&id=' + encodeURIComponent(id) + '&callback=' + cbName;
@@ -1339,9 +1362,10 @@ form.addEventListener('submit', async function(e) {
     document.querySelector('.btn-icon').style.display = 'none';
     spinner.style.display = 'block';
 
+    let refNumber = '';
     if (GOOGLE_SCRIPT_URL !== 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
-        const isDuplicate = await checkDuplicateId(idInput.value);
-        if (isDuplicate === true) {
+        const checkResult = await checkRegistration(idInput.value);
+        if (checkResult && checkResult.exists === true) {
             showToast('رقم الهوية هذا مسجل مسبقًا، لا يمكن التسجيل مرتين بنفس الرقم', 'error');
             document.getElementById('idMsg').textContent = 'هذا الرقم مسجل مسبقًا';
             document.getElementById('idMsg').className = 'field-msg';
@@ -1352,6 +1376,9 @@ form.addEventListener('submit', async function(e) {
             document.querySelector('.btn-icon').style.display = '';
             spinner.style.display = 'none';
             return;
+        }
+        if (checkResult && checkResult.refNumber) {
+            refNumber = checkResult.refNumber;
         }
     }
 
@@ -1372,6 +1399,7 @@ form.addEventListener('submit', async function(e) {
         altPhoneNumber: altInput.value || 'لا يوجد',
         whatsappNumber: waPrefix + waInput.value,
         consentGiven: 'نعم',
+        refNumber: refNumber,
         timestamp: new Date().toISOString()
     };
 
@@ -1383,14 +1411,14 @@ form.addEventListener('submit', async function(e) {
             saved.push(formData);
             localStorage.setItem('palette_submissions', JSON.stringify(saved));
             await new Promise(r => setTimeout(r, 1200));
-            showSuccess();
+            showSuccess(refNumber || 'PVA-TEST');
         } else {
             await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 body: JSON.stringify(formData)
             });
-            showSuccess();
+            showSuccess(refNumber);
         }
     } catch (error) {
         console.error('خطأ في الإرسال:', error);
@@ -1411,8 +1439,15 @@ form.addEventListener('submit', async function(e) {
 });
 
 // === عرض نجاح التسجيل ===
-function showSuccess() {
+function showSuccess(refNumber) {
     successOverlay.classList.add('show');
+    const refBox = document.getElementById('refNumberBox');
+    if (refNumber) {
+        document.getElementById('refNumberDisplay').textContent = refNumber;
+        refBox.style.display = 'flex';
+    } else {
+        refBox.style.display = 'none';
+    }
     showToast('تم تسجيل بياناتك بنجاح', 'success');
     form.classList.add('form-sent');
 }

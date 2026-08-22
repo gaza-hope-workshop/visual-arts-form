@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة إدارة - جمعية الفنانين التشكيليين محافظة رفح</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-primary:#faf8f4; --bg-card:#ffffff; --bg-input:#f7f5f0;
+    --accent-gold:#b8860b; --accent-gold-light:#d4a017; --accent-gold-pale:rgba(184,134,11,0.08);
+    --accent-terracotta:#c0583a; --accent-teal:#2e7d6a;
+    --text-primary:#2d2418; --text-secondary:#6b5e4f; --text-muted:#a39889;
+    --border:#e0dbd3; --error:#c0392b; --success:#27ae60;
+    --shadow-md:0 8px 30px rgba(45,36,24,0.08);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'Cairo',sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; direction:rtl; }
+
+  /* ===== قفل الدخول ===== */
+  .lock-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .lock-card{ background:var(--bg-card); border-radius:20px; padding:40px 32px; max-width:360px; width:100%; text-align:center; box-shadow:var(--shadow-md); }
+  .lock-card h1{ font-family:'Playfair Display',serif; color:var(--accent-gold); font-size:1.3rem; margin-bottom:6px; }
+  .lock-card p{ color:var(--text-secondary); font-size:0.85rem; margin-bottom:22px; line-height:1.8; }
+  .lock-card input{ width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg-input); font-family:'Cairo',sans-serif; font-size:0.95rem; margin-bottom:12px; outline:none; }
+  .lock-card input:focus{ border-color:var(--accent-gold); }
+  .lock-card button{ width:100%; padding:12px; background:var(--accent-gold); color:#fff; border:none; border-radius:10px; font-family:'Cairo',sans-serif; font-weight:700; font-size:0.95rem; cursor:pointer; }
+  .lock-err{ color:var(--error); font-size:0.82rem; min-height:18px; margin-top:6px; }
+
+  /* ===== لوحة الإدارة ===== */
+  .dash{ display:none; max-width:1200px; margin:0 auto; padding:28px 20px 60px; }
+  .dash.show{ display:block; }
+  .dash-top{ display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:22px; }
+  .dash-top h1{ font-family:'Playfair Display',serif; font-size:1.5rem; color:var(--accent-gold); }
+  .dash-top .sub{ color:var(--text-secondary); font-size:0.85rem; margin-top:4px; }
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+  .toolbar input[type=text]{ flex:1; min-width:200px; padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg-input); font-family:'Cairo',sans-serif; font-size:0.9rem; outline:none; }
+  .toolbar input[type=text]:focus{ border-color:var(--accent-gold); }
+  .toolbar button{ padding:10px 18px; border-radius:10px; border:1.5px solid var(--border); background:#fff; font-family:'Cairo',sans-serif; font-size:0.87rem; cursor:pointer; color:var(--text-secondary); }
+  .toolbar button.primary{ background:var(--accent-teal); border-color:var(--accent-teal); color:#fff; }
+  .count-pill{ font-family:'Cairo',sans-serif; font-size:0.82rem; background:var(--accent-gold-pale); color:var(--accent-gold); padding:6px 14px; border-radius:20px; font-weight:700; white-space:nowrap; }
+
+  .table-wrap{ background:var(--bg-card); border-radius:16px; box-shadow:var(--shadow-md); overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:0.82rem; min-width:1000px; }
+  thead th{ background:var(--bg-input); text-align:right; padding:12px 10px; font-weight:700; color:var(--text-secondary); border-bottom:2px solid var(--border); white-space:nowrap; }
+  tbody td{ padding:10px; border-bottom:1px solid #f0ece2; vertical-align:top; white-space:nowrap; }
+  tbody tr:hover{ background:var(--bg-input); }
+  .muted{ color:var(--text-muted); }
+  .ref-tag{ font-family:'Playfair Display',serif; font-weight:700; color:var(--accent-gold); }
+  .empty-state, .loading-state{ text-align:center; padding:60px 20px; color:var(--text-muted); font-size:0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="lock-wrap" id="lockWrap">
+  <div class="lock-card">
+    <h1>لوحة الإدارة</h1>
+    <p>جمعية الفنانين التشكيليين — محافظة رفح<br>هذه المنطقة خاصة بإدارة الجمعية فقط.</p>
+    <input type="password" id="secretInput" placeholder="كلمة المرور">
+    <button id="loginBtn">دخول</button>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
+<div class="dash" id="dash">
+  <div class="dash-top">
+    <div>
+      <h1>سجل الأعضاء</h1>
+      <div class="sub">جمعية الفنانين التشكيليين — محافظة رفح</div>
+    </div>
+    <span class="count-pill" id="countPill">0 عضو</span>
+  </div>
+  <div class="toolbar">
+    <input type="text" id="searchBox" placeholder="بحث بالاسم أو رقم الهوية أو رقم التسجيل">
+    <button id="refreshBtn">تحديث</button>
+    <button class="primary" id="exportBtn">تصدير CSV</button>
+  </div>
+  <div class="table-wrap">
+    <div id="tableArea"><div class="loading-state">جاري التحميل...</div></div>
+  </div>
+</div>
+
+<script>
+// ------- حط هون نفس رابط الاستمارة ونفس كلمة السر يلي بالكود -------
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUu4RjWM70hcUtRP9gv9LLPznWZDIeE-EwmIc2kcqukIuCdin9l1MDjcoz7NTVBf5qFw/exec';
+// ---------------------------------------------------------------
+
+let currentSecret = '';
+let allRows = [];
+
+function jsonpFetch(url) {
+    return new Promise((resolve, reject) => {
+        const cbName = 'jsonpCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+        const cleanup = () => { delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); clearTimeout(timer); };
+        window[cbName] = function(data) { cleanup(); resolve(data); };
+        const script = document.createElement('script');
+        script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+        script.onerror = function() { cleanup(); reject(new Error('network')); };
+        const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 10000);
+        document.body.appendChild(script);
+    });
+}
+
+document.getElementById('loginBtn').addEventListener('click', attemptLogin);
+document.getElementById('secretInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') attemptLogin(); });
+
+async function attemptLogin() {
+    const val = document.getElementById('secretInput').value.trim();
+    if (!val) return;
+    document.getElementById('lockErr').textContent = '';
+    document.getElementById('loginBtn').textContent = 'جاري التحقق...';
+    try {
+        const data = await jsonpFetch(GOOGLE_SCRIPT_URL + '?action=list&secret=' + encodeURIComponent(val));
+        if (data && data.error === 'unauthorized') {
+            document.getElementById('lockErr').textContent = 'كلمة مرور خاطئة';
+            document.getElementById('loginBtn').textContent = 'دخول';
+            return;
+        }
+        currentSecret = val;
+        allRows = (data && data.rows) ? data.rows : [];
+        document.getElementById('lockWrap').style.display = 'none';
+        document.getElementById('dash').classList.add('show');
+        renderTable(allRows);
+    } catch (err) {
+        document.getElementById('lockErr').textContent = 'تعذّر الاتصال، حاول مرة ثانية';
+        document.getElementById('loginBtn').textContent = 'دخول';
+    }
+}
+
+async function reloadData() {
+    document.getElementById('tableArea').innerHTML = '<div class="loading-state">جاري التحميل...</div>';
+    try {
+        const data = await jsonpFetch(GOOGLE_SCRIPT_URL + '?action=list&secret=' + encodeURIComponent(currentSecret));
+        allRows = (data && data.rows) ? data.rows : [];
+        renderTable(allRows);
+    } catch (err) {
+        document.getElementById('tableArea').innerHTML = '<div class="empty-state">تعذّر تحميل البيانات، حاول مرة ثانية.</div>';
+    }
+}
+document.getElementById('refreshBtn').addEventListener('click', reloadData);
+
+function esc(str) {
+    return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    try { const d = new Date(iso); return d.toLocaleDateString('ar-EG', {year:'numeric',month:'short',day:'numeric'}); }
+    catch { return iso; }
+}
+
+function renderTable(rows) {
+    document.getElementById('countPill').textContent = rows.length + ' عضو';
+    const area = document.getElementById('tableArea');
+    if (rows.length === 0) {
+        area.innerHTML = '<div class="empty-state">ما في أعضاء مسجلين لسه.</div>';
+        return;
+    }
+    const trs = rows.map(r => `
+        <tr>
+            <td class="ref-tag">${esc(r.refNumber)}</td>
+            <td>${esc(r.name)}</td>
+            <td>${esc(r.idNumber)}</td>
+            <td>${esc(r.degree)}</td>
+            <td>${esc(r.specialty)}</td>
+            <td>${esc(r.currentPlace) || '<span class="muted">—</span>'}</td>
+            <td>${esc(r.phone)}</td>
+            <td>${esc(r.whatsapp)}</td>
+            <td class="muted">${fmtDate(r.date)}</td>
+        </tr>
+    `).join('');
+    area.innerHTML = `
+        <table>
+            <thead><tr>
+                <th>رقم التسجيل</th><th>الاسم</th><th>رقم الهوية</th><th>الشهادة</th>
+                <th>التخصص</th><th>مكان النزوح</th><th>التواصل</th><th>واتساب</th><th>التاريخ</th>
+            </tr></thead>
+            <tbody>${trs}</tbody>
+        </table>
+    `;
+}
+
+document.getElementById('searchBox').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) { renderTable(allRows); return; }
+    renderTable(allRows.filter(r =>
+        (r.name || '').toLowerCase().includes(q) ||
+        (r.idNumber || '').toLowerCase().includes(q) ||
+        (r.refNumber || '').toLowerCase().includes(q)
+    ));
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+    if (allRows.length === 0) { alert('ما في بيانات للتصدير'); return; }
+    const headers = ['رقم التسجيل','الاسم','رقم الهوية','تاريخ الميلاد','الحالة الاجتماعية','الشهادة','التخصص','شارك بمعارض','السكن الأصلي','مكان النزوح','رقم التواصل','رقم بديل','واتساب','تاريخ التسجيل'];
+    const dataRows = allRows.map(r => [r.refNumber, r.name, r.idNumber, r.dob, r.maritalStatus, r.degree, r.specialty, r.exhibited, r.originalPlace, r.currentPlace, r.phone, r.altPhone, r.whatsapp, r.date]);
+    let csv = '\uFEFF' + headers.join(',') + '\n' + dataRows.map(row =>
+        row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')
+    ).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'artists_members_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>

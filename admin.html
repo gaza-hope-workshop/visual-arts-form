@@ -41,9 +41,9 @@
   .count-pill{ font-family:'Cairo',sans-serif; font-size:0.82rem; background:var(--accent-gold-pale); color:var(--accent-gold); padding:6px 14px; border-radius:20px; font-weight:700; white-space:nowrap; }
 
   .table-wrap{ background:var(--bg-card); border-radius:16px; box-shadow:var(--shadow-md); overflow-x:auto; }
-  table{ width:100%; border-collapse:collapse; font-size:0.82rem; min-width:1000px; }
-  thead th{ background:var(--bg-input); text-align:right; padding:12px 10px; font-weight:700; color:var(--text-secondary); border-bottom:2px solid var(--border); white-space:nowrap; }
-  tbody td{ padding:10px; border-bottom:1px solid #f0ece2; vertical-align:top; white-space:nowrap; }
+  table{ width:100%; border-collapse:collapse; font-size:0.82rem; min-width:1100px; border:1px solid var(--border); }
+  thead th{ background:var(--bg-input); text-align:right; padding:12px 10px; font-weight:700; color:var(--text-secondary); border:1px solid var(--border); white-space:nowrap; }
+  tbody td{ padding:10px; border:1px solid var(--border); vertical-align:top; white-space:nowrap; }
   tbody tr:hover{ background:var(--bg-input); }
   .muted{ color:var(--text-muted); }
   .ref-tag{ font-family:'Playfair Display',serif; font-weight:700; color:var(--accent-gold); }
@@ -162,6 +162,7 @@ function renderTable(rows) {
             <td>${esc(r.idNumber)}</td>
             <td>${esc(r.degree)}</td>
             <td>${esc(r.specialty)}</td>
+            <td>${esc(r.originalPlace) || '<span class="muted">—</span>'}</td>
             <td>${esc(r.currentPlace) || '<span class="muted">—</span>'}</td>
             <td>${esc(r.phone)}</td>
             <td>${esc(r.whatsapp)}</td>
@@ -172,7 +173,7 @@ function renderTable(rows) {
         <table>
             <thead><tr>
                 <th>رقم التسجيل</th><th>الاسم</th><th>رقم الهوية</th><th>الشهادة</th>
-                <th>التخصص</th><th>مكان النزوح</th><th>التواصل</th><th>واتساب</th><th>التاريخ</th>
+                <th>التخصص</th><th>السكن الأصلي</th><th>مكان النزوح</th><th>التواصل</th><th>واتساب</th><th>التاريخ</th>
             </tr></thead>
             <tbody>${trs}</tbody>
         </table>
@@ -183,9 +184,10 @@ document.getElementById('searchBox').addEventListener('input', (e) => {
     const q = e.target.value.trim().toLowerCase();
     if (!q) { renderTable(allRows); return; }
     renderTable(allRows.filter(r =>
-        (r.name || '').toLowerCase().includes(q) ||
-        (r.idNumber || '').toLowerCase().includes(q) ||
-        (r.refNumber || '').toLowerCase().includes(q)
+        String(r.name || '').toLowerCase().includes(q) ||
+        String(r.idNumber || '').toLowerCase().includes(q) ||
+        String(r.refNumber || '').toLowerCase().includes(q) ||
+        String(r.originalPlace || '').toLowerCase().includes(q)
     ));
 });
 

@@ -1088,9 +1088,9 @@
                 </div>
 
                 <div class="fields-grid">
-                    <!-- مكان السكن الأصلي -->
+                    <!-- مكان الإقامة التفصيلي -->
                     <div class="field-group" style="animation-delay:1.1s">
-                        <label for="originalResidence"><i class="fas fa-house-chimney"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 11l8-6 8 6"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9"/><path d="M16 4h2v4"/></svg></i>مكان السكن الأصلي</label>
+                        <label for="originalResidence"><i class="fas fa-house-chimney"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 11l8-6 8 6"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9"/><path d="M16 4h2v4"/></svg></i>مكان الإقامة التفصيلي</label>
                         <div class="input-wrapper">
                             <input type="text" id="originalResidence" placeholder="المدينة / القرية الأصلية" required>
                         </div>
@@ -1451,7 +1451,7 @@ function validateAll() {
     if (!document.getElementById('degree').value) errors.push('يرجى اختيار الشهادة الجامعية');
     if (!document.getElementById('specialization').value.trim()) errors.push('يرجى إدخال التخصص');
     if (!document.querySelector('input[name="exhibition"]:checked')) errors.push('يرجى تحديد ما إذا كنت شاركت في معارض');
-    if (!document.getElementById('originalResidence').value.trim()) errors.push('يرجى إدخال مكان السكن الأصلي');
+    if (!document.getElementById('originalResidence').value.trim()) errors.push('يرجى إدخال مكان الإقامة التفصيلي');
     if (!document.getElementById('currentResidence').value.trim()) errors.push('يرجى إدخال مكان النزوح الحالي');
     if (!document.getElementById('maritalStatus').value) errors.push('يرجى اختيار الحالة الاجتماعية');
     if (phoneInput.value.length !== 10) errors.push('رقم التواصل يجب أن يكون 10 أرقام بالضبط');

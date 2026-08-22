@@ -89,6 +89,28 @@
             margin-bottom: 12px;
         }
         .welcome-card p { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.85; margin-bottom: 20px; }
+        .governorate-badge {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(46,125,106,0.08);
+            border: 1.5px solid rgba(46,125,106,0.3);
+            color: var(--accent-teal);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.85rem;
+            text-align: right;
+            margin-bottom: 18px;
+            animation: badgeGlow 2.2s ease-in-out infinite;
+        }
+        .governorate-badge svg { width: 22px; height: 22px; flex-shrink: 0; }
+        .governorate-badge strong { color: var(--text-primary); }
+        #governorateSelect:disabled {
+            opacity: 1;
+            color: var(--text-primary);
+            font-weight: 700;
+            cursor: default;
+            background-color: var(--accent-gold-pale);
+            border-color: var(--accent-gold);
+        }
         .welcome-badge {
             display: flex; align-items: center; gap: 10px;
             background: rgba(46,125,106,0.08);
@@ -1088,11 +1110,21 @@
                 </div>
 
                 <div class="fields-grid">
+                    <!-- المحافظة -->
+                    <div class="field-group full" style="animation-delay:1.05s">
+                        <label for="governorateSelect"><i class="fas fa-location-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/></svg></i>اختر المحافظة</label>
+                        <div class="input-wrapper">
+                            <select id="governorateSelect" disabled>
+                                <option value="رفح" selected>رفح</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- مكان الإقامة التفصيلي -->
                     <div class="field-group" style="animation-delay:1.1s">
-                        <label for="originalResidence"><i class="fas fa-house-chimney"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 11l8-6 8 6"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9"/><path d="M16 4h2v4"/></svg></i>مكان الإقامة التفصيلي</label>
+                        <label for="originalResidence"><i class="fas fa-house-chimney"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 11l8-6 8 6"/><path d="M6 10v9a1 1 0 001 1h10a1 1 0 001-1v-9"/><path d="M16 4h2v4"/></svg></i>العنوان في رفح بالتفصيل</label>
                         <div class="input-wrapper">
-                            <input type="text" id="originalResidence" placeholder="المدينة / القرية الأصلية" required>
+                            <input type="text" id="originalResidence" placeholder="الحي / المنطقة داخل رفح" required>
                         </div>
                         <span class="field-msg"></span>
                     </div>
@@ -1451,7 +1483,7 @@ function validateAll() {
     if (!document.getElementById('degree').value) errors.push('يرجى اختيار الشهادة الجامعية');
     if (!document.getElementById('specialization').value.trim()) errors.push('يرجى إدخال التخصص');
     if (!document.querySelector('input[name="exhibition"]:checked')) errors.push('يرجى تحديد ما إذا كنت شاركت في معارض');
-    if (!document.getElementById('originalResidence').value.trim()) errors.push('يرجى إدخال مكان الإقامة التفصيلي');
+    if (!document.getElementById('originalResidence').value.trim()) errors.push('يرجى إدخال العنوان في رفح بالتفصيل');
     if (!document.getElementById('currentResidence').value.trim()) errors.push('يرجى إدخال مكان النزوح الحالي');
     if (!document.getElementById('maritalStatus').value) errors.push('يرجى اختيار الحالة الاجتماعية');
     if (phoneInput.value.length !== 10) errors.push('رقم التواصل يجب أن يكون 10 أرقام بالضبط');
@@ -1548,6 +1580,7 @@ form.addEventListener('submit', async function(e) {
         degree: document.getElementById('degree').value,
         specialization: document.getElementById('specialization').value.trim(),
         exhibitionParticipation: document.querySelector('input[name="exhibition"]:checked').value,
+        governorate: document.getElementById('governorateSelect').value,
         originalResidence: document.getElementById('originalResidence').value.trim(),
         currentResidence: document.getElementById('currentResidence').value.trim(),
         maritalStatus: document.getElementById('maritalStatus').value,

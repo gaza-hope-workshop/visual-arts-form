@@ -524,6 +524,41 @@
             font-weight: 600;
         }
 
+        .captcha-box {
+            margin-top: 4px;
+            margin-bottom: 18px;
+        }
+        .captcha-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .captcha-box label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.87rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .captcha-box label #captchaQuestion {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .captcha-box input {
+            width: 100px;
+            padding: 8px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-input);
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .captcha-box input:focus { border-color: var(--accent-teal); }
+        .captcha-box input.invalid { border-color: var(--error); }
+
         .consent-box {
             display: flex;
             align-items: flex-start;
@@ -768,30 +803,33 @@
             justify-content: center;
             animation: fadeIn 0.35s ease;
             backdrop-filter: blur(4px);
+            padding: 18px;
         }
         .success-overlay.show { display: flex; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .success-card {
             background: var(--bg-card);
             border-radius: 22px;
-            padding: 46px 38px;
+            padding: 34px 30px;
             max-width: 380px;
             width: 88%;
+            max-height: 92vh;
+            overflow-y: auto;
             text-align: center;
             box-shadow: var(--shadow-lg);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             animation: popIn 0.4s ease;
         }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .success-check {
-            width: 80px; height: 80px;
+            width: 62px; height: 62px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--success), #219a52);
             display: flex; align-items: center; justify-content: center;
-            font-size: 2.2rem;
+            font-size: 1.7rem;
             color: #fff;
             box-shadow: 0 8px 30px rgba(39,174,96,0.3);
             animation: checkBounce 0.6s ease 0.2s both;
@@ -892,6 +930,10 @@
             </div>
 
             <form id="artistForm" novalidate autocomplete="off">
+                <div style="position:absolute; left:-9999px; top:-9999px; height:0; overflow:hidden;" aria-hidden="true">
+                    <label for="websiteField">اتركه فارغاً</label>
+                    <input type="text" id="websiteField" name="website" tabindex="-1" autocomplete="off">
+                </div>
 
                 <!-- ========== القسم الأول: البيانات الشخصية ========== -->
                 <div class="section-title" style="animation-delay:0.6s">
@@ -1074,6 +1116,14 @@
                     </div>
                 </div>
 
+                <!-- سؤال تحقق بسيط (CAPTCHA) -->
+                <div class="captcha-box">
+                    <div class="captcha-hint">سؤال أمني بسيط لمنع الإرسال الآلي (Bots)</div>
+                    <label for="captchaAnswer">🔢 كم ناتج <span id="captchaQuestion"></span> ؟</label>
+                    <input type="text" id="captchaAnswer" inputmode="numeric" placeholder="اكتب الناتج هنا">
+                    <span class="field-msg" id="captchaMsg"></span>
+                </div>
+
                 <!-- زر الإرسال -->
                 <div class="consent-box">
                     <input type="checkbox" id="consentCheck" required>
@@ -1111,6 +1161,18 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUu4RjWM70hc
 
 // === تحديث سنة التذييل ===
 document.getElementById('yearText').textContent = new Date().getFullYear();
+const formLoadTime = Date.now(); // لحماية بسيطة من البوتات — شوفي التحقق بمعالج الإرسال
+
+// === سؤال تحقق بسيط (CAPTCHA) ===
+let captchaAnswer = 0;
+function newCaptcha() {
+    const a = Math.floor(Math.random() * 8) + 2; // 2-9
+    const b = Math.floor(Math.random() * 8) + 2; // 2-9
+    captchaAnswer = a * b;
+    document.getElementById('captchaQuestion').textContent = a + ' × ' + b;
+    document.getElementById('captchaAnswer').value = '';
+}
+newCaptcha();
 
 // === نافذة الترحيب / التنويه ===
 const welcomeOverlay = document.getElementById('welcomeOverlay');
@@ -1300,6 +1362,14 @@ waInput.addEventListener('input', function() {
 // === التحقق الشامل قبل الإرسال ===
 function validateAll() {
     let errors = [];
+    const captchaInput = document.getElementById('captchaAnswer');
+    document.getElementById('captchaMsg').textContent = '';
+    captchaInput.classList.remove('invalid');
+    if (parseInt(captchaInput.value, 10) !== captchaAnswer) {
+        errors.push('الإجابة على سؤال التحقق غير صحيحة');
+        document.getElementById('captchaMsg').textContent = 'الإجابة غير صحيحة، حاولي مرة ثانية';
+        captchaInput.classList.add('invalid');
+    }
     const nameParts = fullNameInput.value.trim().split(/\s+/).filter(p => p.length > 0);
     if (nameParts.length < 4) errors.push('الاسم الرباعي مطلوب (4 أجزاء)');
     if (idInput.value.length !== 9) errors.push('رقم الهوية يجب أن يكون 9 أرقام بالضبط');
@@ -1349,9 +1419,21 @@ function checkRegistration(id) {
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    // === حماية بسيطة من الإرسال العشوائي ===
+    if (document.getElementById('websiteField').value.trim() !== '') {
+        // حقل مخفي اتعبّى — على الأغلب بوت. نتجاهل الطلب بصمت.
+        return;
+    }
+    if (Date.now() - formLoadTime < 3000) {
+        // إرسال أسرع من 3 ثواني من فتح الصفحة — غير واقعي لإنسان حقيقي
+        showToast('الرجاء إعادة المحاولة', 'error');
+        return;
+    }
+
     const errors = validateAll();
     if (errors.length > 0) {
         errors.forEach(err => showToast(err, 'error'));
+        newCaptcha();
         const firstInvalid = form.querySelector('input.invalid, select:invalid');
         if (firstInvalid) firstInvalid.focus();
         return;
@@ -1466,6 +1548,7 @@ function resetForm() {
     document.getElementById('phoneCounter').className = 'counter';
     document.getElementById('altCounter').textContent = '0/10';
     document.getElementById('altCounter').className = 'counter';
+    newCaptcha();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

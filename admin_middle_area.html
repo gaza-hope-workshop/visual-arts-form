@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة إدارة - الوسطى</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-primary:#faf8f4; --bg-card:#ffffff; --bg-input:#f7f5f0; --bg-stripe:#fbf9f5;
+    --accent-gold:#b8860b; --accent-gold-light:#d4a017; --accent-gold-pale:rgba(184,134,11,0.08);
+    --accent-terracotta:#c0583a; --accent-teal:#2e7d6a; --accent-teal-pale:rgba(46,125,106,0.08);
+    --text-primary:#2d2418; --text-secondary:#6b5e4f; --text-muted:#a39889;
+    --border:#e0dbd3; --error:#c0392b; --success:#27ae60;
+    --shadow-md:0 8px 30px rgba(45,36,24,0.08);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'Cairo',sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; direction:rtl; }
+
+  /* ===== قفل الدخول ===== */
+  .lock-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .lock-card{ background:var(--bg-card); border-radius:20px; padding:40px 32px; max-width:360px; width:100%; text-align:center; box-shadow:var(--shadow-md); }
+  .lock-card h1{ font-family:'Playfair Display',serif; color:var(--accent-gold); font-size:1.3rem; margin-bottom:6px; }
+  .lock-card p{ color:var(--text-secondary); font-size:0.85rem; margin-bottom:22px; line-height:1.8; }
+  .lock-card input{ width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg-input); font-family:'Cairo',sans-serif; font-size:0.95rem; margin-bottom:12px; outline:none; }
+  .lock-card input:focus{ border-color:var(--accent-gold); }
+  .lock-card button{ width:100%; padding:12px; background:var(--accent-gold); color:#fff; border:none; border-radius:10px; font-family:'Cairo',sans-serif; font-weight:700; font-size:0.95rem; cursor:pointer; }
+  .lock-err{ color:var(--error); font-size:0.82rem; min-height:18px; margin-top:6px; }
+
+  /* ===== لوحة الإدارة ===== */
+  .dash{ display:none; max-width:1500px; margin:0 auto; padding:28px 20px 60px; }
+  .dash.show{ display:block; }
+  .dash-top{ display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:22px; }
+  .dash-top h1{ font-family:'Playfair Display',serif; font-size:1.5rem; color:var(--accent-gold); }
+  .dash-top .sub{ color:var(--text-secondary); font-size:0.85rem; margin-top:4px; }
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+  .toolbar input[type=text]{ flex:1; min-width:200px; padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg-input); font-family:'Cairo',sans-serif; font-size:0.9rem; outline:none; }
+  .toolbar input[type=text]:focus{ border-color:var(--accent-gold); }
+  .toolbar button{ padding:10px 18px; border-radius:10px; border:1.5px solid var(--border); background:#fff; font-family:'Cairo',sans-serif; font-size:0.87rem; cursor:pointer; color:var(--text-secondary); transition:all .2s ease; }
+  .toolbar button:hover{ border-color:var(--accent-gold); color:var(--accent-gold); }
+  .toolbar button.primary{ background:var(--accent-teal); border-color:var(--accent-teal); color:#fff; }
+  .toolbar button.primary:hover{ background:#256456; color:#fff; }
+  .count-pill{ font-family:'Cairo',sans-serif; font-size:0.82rem; background:var(--accent-gold-pale); color:var(--accent-gold); padding:6px 14px; border-radius:20px; font-weight:700; white-space:nowrap; }
+
+  .table-wrap{ background:var(--bg-card); border-radius:16px; box-shadow:var(--shadow-md); overflow:auto; max-height:78vh; position:relative; border:1px solid var(--border); }
+  table{ width:100%; border-collapse:separate; border-spacing:0; font-size:0.8rem; min-width:2100px; }
+  thead th{
+    position:sticky; top:0; z-index:3;
+    background:var(--accent-teal); color:#fff;
+    text-align:right; padding:12px 10px; font-weight:700;
+    border-bottom:2px solid #245c4f; border-left:1px solid rgba(255,255,255,0.15);
+    white-space:nowrap;
+  }
+  tbody td{ padding:9px 10px; border-bottom:1px solid var(--border); border-left:1px solid #efe9dc; vertical-align:top; white-space:nowrap; }
+  tbody tr:nth-child(even){ background:var(--bg-stripe); }
+  tbody tr:hover{ background:var(--accent-gold-pale); }
+
+  /* عمود الرقم المرجعي ثابت أثناء التمرير الأفقي */
+  thead th:first-child{ position:sticky; right:0; z-index:4; background:#245c4f; }
+  tbody td:first-child{ position:sticky; right:0; z-index:2; background:inherit; box-shadow: 2px 0 4px rgba(0,0,0,0.04); }
+  tbody tr:nth-child(even) td:first-child{ background:var(--bg-stripe); }
+  tbody tr:not(:nth-child(even)) td:first-child{ background:var(--bg-card); }
+
+  .muted{ color:var(--text-muted); }
+  .ref-tag{ font-family:'Playfair Display',serif; font-weight:700; color:var(--accent-gold); }
+  .bio-cell{ max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:help; }
+  .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.74rem; font-weight:700; white-space:nowrap; }
+  .badge-yes{ background:rgba(39,174,96,0.12); color:var(--success); }
+  .badge-no{ background:var(--bg-input); color:var(--text-muted); }
+  .badge-gov{ background:var(--accent-teal-pale); color:var(--accent-teal); }
+  .cv-link{ display:inline-flex; align-items:center; gap:5px; background:var(--accent-gold-pale); color:var(--accent-gold); padding:4px 10px; border-radius:8px; font-size:0.76rem; font-weight:700; text-decoration:none; }
+  .cv-link:hover{ background:var(--accent-gold); color:#fff; }
+  .empty-state, .loading-state{ text-align:center; padding:60px 20px; color:var(--text-muted); font-size:0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="lock-wrap" id="lockWrap">
+  <div class="lock-card">
+    <h1>لوحة إدارة الوسطى</h1>
+    <p>جمعية الفنانين التشكيليين — محافظة الوسطى<br>هذه المنطقة خاصة بإدارة هذه المحافظة فقط.</p>
+    <input type="password" id="secretInput" placeholder="كلمة المرور">
+    <button id="loginBtn">دخول</button>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
+<div class="dash" id="dash">
+  <div class="dash-top">
+    <div>
+      <h1>سجل أعضاء الوسطى</h1>
+      <div class="sub">جمعية الفنانين التشكيليين — محافظة الوسطى</div>
+    </div>
+    <span class="count-pill" id="countPill">0 عضو</span>
+  </div>
+  <div class="toolbar">
+    <input type="text" id="searchBox" placeholder="بحث بالاسم أو رقم الهوية أو رقم التسجيل أو المحافظة">
+    <button id="refreshBtn">تحديث</button>
+    <button class="primary" id="exportBtn">تصدير CSV</button>
+  </div>
+  <div class="table-wrap">
+    <div id="tableArea"><div class="loading-state">جاري التحميل...</div></div>
+  </div>
+</div>
+
+<script>
+// ------- حط هون نفس رابط الاستمارة ونفس كلمة السر يلي بالكود -------
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweQAoxWx0SRy58kvgMqrTi1EJnMmOZPD_FKMTI4a4zbzblKN74YpuZkU2Wnibi2UUGAA/exec';
+// ---------------------------------------------------------------
+
+let currentSecret = '';
+let allRows = [];
+
+function jsonpFetch(url) {
+    return new Promise((resolve, reject) => {
+        const cbName = 'jsonpCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+        const cleanup = () => { delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); clearTimeout(timer); };
+        window[cbName] = function(data) { cleanup(); resolve(data); };
+        const script = document.createElement('script');
+        script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+        script.onerror = function() { cleanup(); reject(new Error('network')); };
+        const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 10000);
+        document.body.appendChild(script);
+    });
+}
+
+document.getElementById('loginBtn').addEventListener('click', attemptLogin);
+document.getElementById('secretInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') attemptLogin(); });
+
+async function attemptLogin() {
+    const val = document.getElementById('secretInput').value.trim();
+    if (!val) return;
+    document.getElementById('lockErr').textContent = '';
+    document.getElementById('loginBtn').textContent = 'جاري التحقق...';
+    try {
+        const data = await jsonpFetch(GOOGLE_SCRIPT_URL + '?action=list&secret=' + encodeURIComponent(val));
+        if (data && data.error === 'unauthorized') {
+            document.getElementById('lockErr').textContent = 'كلمة مرور خاطئة';
+            document.getElementById('loginBtn').textContent = 'دخول';
+            return;
+        }
+        currentSecret = val;
+        allRows = (data && data.rows) ? data.rows : [];
+        document.getElementById('lockWrap').style.display = 'none';
+        document.getElementById('dash').classList.add('show');
+        renderTable(allRows);
+    } catch (err) {
+        document.getElementById('lockErr').textContent = 'تعذّر الاتصال، حاول مرة ثانية';
+        document.getElementById('loginBtn').textContent = 'دخول';
+    }
+}
+
+async function reloadData() {
+    document.getElementById('tableArea').innerHTML = '<div class="loading-state">جاري التحميل...</div>';
+    try {
+        const data = await jsonpFetch(GOOGLE_SCRIPT_URL + '?action=list&secret=' + encodeURIComponent(currentSecret));
+        allRows = (data && data.rows) ? data.rows : [];
+        renderTable(allRows);
+    } catch (err) {
+        document.getElementById('tableArea').innerHTML = '<div class="empty-state">تعذّر تحميل البيانات، حاول مرة ثانية.</div>';
+    }
+}
+document.getElementById('refreshBtn').addEventListener('click', reloadData);
+
+function esc(str) {
+    return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    try { const d = new Date(iso); return d.toLocaleDateString('ar-EG', {year:'numeric',month:'short',day:'numeric'}); }
+    catch { return iso; }
+}
+function dash(val) {
+    const s = esc(val);
+    return s ? s : '<span class="muted">—</span>';
+}
+function yesNoBadge(val) {
+    const v = String(val || '').trim();
+    if (v === 'نعم') return '<span class="badge badge-yes">نعم</span>';
+    if (v === 'لا') return '<span class="badge badge-no">لا</span>';
+    return '<span class="muted">—</span>';
+}
+
+function renderTable(rows) {
+    document.getElementById('countPill').textContent = rows.length + ' عضو';
+    const area = document.getElementById('tableArea');
+    if (rows.length === 0) {
+        area.innerHTML = '<div class="empty-state">ما في أعضاء مسجلين لسه.</div>';
+        return;
+    }
+    const trs = rows.map(r => `
+        <tr>
+            <td class="ref-tag">${dash(r.refNumber)}</td>
+            <td>${dash(r.name)}</td>
+            <td>${dash(r.gender)}</td>
+            <td>${dash(r.idNumber)}</td>
+            <td>${dash(r.dob)}</td>
+            <td>${dash(r.maritalStatus)}</td>
+            <td>${r.governorate ? '<span class="badge badge-gov">' + esc(r.governorate) + '</span>' : '<span class="muted">—</span>'}</td>
+            <td>${dash(r.degree)}</td>
+            <td>${dash(r.specialty)}</td>
+            <td>${yesNoBadge(r.exhibited)}</td>
+            <td class="bio-cell" title="${esc(r.bio)}">${dash(r.bio)}</td>
+            <td>${dash(r.originalPlace)}</td>
+            <td>${dash(r.currentPlace)}</td>
+            <td>${dash(r.phone)}</td>
+            <td>${dash(r.altPhone)}</td>
+            <td>${dash(r.whatsapp)}</td>
+            <td>${r.cvUrl ? '<a class="cv-link" href="' + esc(r.cvUrl) + '" target="_blank" rel="noopener">📄 عرض</a>' : '<span class="muted">—</span>'}</td>
+            <td>${yesNoBadge(r.consent)}</td>
+            <td class="muted">${fmtDate(r.date)}</td>
+        </tr>
+    `).join('');
+    area.innerHTML = `
+        <table>
+            <thead><tr>
+                <th>رقم التسجيل</th><th>الاسم</th><th>الجنس</th><th>رقم الهوية</th>
+                <th>تاريخ الميلاد</th><th>الحالة الاجتماعية</th><th>المحافظة</th>
+                <th>الشهادة</th><th>التخصص</th><th>شارك بمعارض</th><th>نبذة عن الفنان</th>
+                <th>السكن الأصلي</th><th>مكان النزوح</th><th>رقم التواصل</th><th>رقم بديل</th>
+                <th>واتساب</th><th>السيرة الذاتية</th><th>الموافقة</th><th>تاريخ التسجيل</th>
+            </tr></thead>
+            <tbody>${trs}</tbody>
+        </table>
+    `;
+}
+
+document.getElementById('searchBox').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) { renderTable(allRows); return; }
+    renderTable(allRows.filter(r =>
+        String(r.name || '').toLowerCase().includes(q) ||
+        String(r.idNumber || '').toLowerCase().includes(q) ||
+        String(r.refNumber || '').toLowerCase().includes(q) ||
+        String(r.originalPlace || '').toLowerCase().includes(q) ||
+        String(r.governorate || '').toLowerCase().includes(q)
+    ));
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+    if (allRows.length === 0) { alert('ما في بيانات للتصدير'); return; }
+    const headers = ['رقم التسجيل','الاسم','الجنس','رقم الهوية','تاريخ الميلاد','الحالة الاجتماعية','المحافظة','الشهادة','التخصص','شارك بمعارض','نبذة عن الفنان','السكن الأصلي','مكان النزوح','رقم التواصل','رقم بديل','واتساب','رابط السيرة الذاتية','الموافقة','تاريخ التسجيل'];
+    const dataRows = allRows.map(r => [r.refNumber, r.name, r.gender, r.idNumber, r.dob, r.maritalStatus, r.governorate, r.degree, r.specialty, r.exhibited, r.bio, r.originalPlace, r.currentPlace, r.phone, r.altPhone, r.whatsapp, r.cvUrl, r.consent, r.date]);
+    let csv = '\uFEFF' + headers.join(',') + '\n' + dataRows.map(row =>
+        row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')
+    ).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'artists_admin_middle_area_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>

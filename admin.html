@@ -73,6 +73,34 @@
   .cv-link{ display:inline-flex; align-items:center; gap:5px; background:var(--accent-gold-pale); color:var(--accent-gold); padding:4px 10px; border-radius:8px; font-size:0.76rem; font-weight:700; text-decoration:none; }
   .cv-link:hover{ background:var(--accent-gold); color:#fff; }
   .empty-state, .loading-state{ text-align:center; padding:60px 20px; color:var(--text-muted); font-size:0.9rem; }
+
+  /* ===== قالب طباعة PDF (مخفي، يُلتقط كصورة فقط) ===== */
+  #pdfPrintArea{
+    position:fixed; top:0; left:-99999px; width:2400px;
+    background:#ffffff; direction:rtl; font-family:'Cairo',sans-serif; padding:28px;
+  }
+  #pdfPrintArea .pdf-title{
+    text-align:center; font-family:'Cairo',sans-serif; font-weight:900; font-size:28px;
+    color:#B8860B; background:#FBF3DF; padding:16px; border-radius:6px; margin-bottom:8px;
+  }
+  #pdfPrintArea .pdf-sub{
+    text-align:center; font-weight:700; font-size:16px; color:#2E7D6A;
+    background:#EFF7F4; padding:10px; border-radius:6px; margin-bottom:16px;
+  }
+  #pdfPrintArea table{ width:100%; border-collapse:collapse; font-size:13px; }
+  #pdfPrintArea th{
+    background:#2E7D6A; color:#fff; font-weight:700; padding:10px 8px;
+    border:1px solid #1D4B40; text-align:center; white-space:nowrap;
+  }
+  #pdfPrintArea td{
+    padding:8px; border:1px solid #D9D2C4; text-align:right; vertical-align:middle;
+    white-space:nowrap; color:#2D2418;
+  }
+  #pdfPrintArea tr:nth-child(even) td{ background:#FBF9F5; }
+  #pdfPrintArea .pdf-ref{ font-weight:700; color:#B8860B; text-align:center; }
+  #pdfPrintArea .pdf-gov{ font-weight:700; color:#2E7D6A; text-align:center; background:#DCEEE8 !important; }
+  #pdfPrintArea .pdf-yes{ font-weight:700; color:#1E7A38; text-align:center; background:#DFF3E4 !important; }
+  #pdfPrintArea .pdf-no{ color:#A39889; text-align:center; }
 </style>
 </head>
 <body>
@@ -108,13 +136,18 @@
     </select>
     <button id="refreshBtn">تحديث</button>
     <button class="primary" id="exportBtn">تصدير Excel</button>
+    <button class="primary" id="exportPdfBtn">تصدير PDF</button>
   </div>
   <div class="table-wrap">
     <div id="tableArea"><div class="loading-state">جاري التحميل...</div></div>
   </div>
 </div>
 
+<div id="pdfPrintArea"></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ------- حط هون نفس رابط الاستمارة ونفس كلمة السر يلي بالكود -------
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYoDReI8jyWVHdx9c1V6ZoGKZNS8OP0lYruUJNjnkm57gSxOU3cPgXIUnQRq7uAcfjKA/exec';
@@ -221,6 +254,12 @@ function yesNoBadge(val) {
     if (v === 'لا') return '<span class="badge badge-no">لا</span>';
     return '<span class="muted">—</span>';
 }
+function getCurrentGovLabel() {
+    const govEl = document.getElementById('govFilter');
+    if (govEl) return govEl.value || 'كل المحافظات';
+    if (typeof FIXED_GOVERNORATE !== 'undefined') return FIXED_GOVERNORATE;
+    return 'كل المحافظات';
+}
 
 function renderTable(rows) {
     shownRows = rows;
@@ -289,7 +328,7 @@ document.getElementById('govFilter').addEventListener('change', applyFilters);
 document.getElementById('exportBtn').addEventListener('click', async () => {
     if (shownRows.length === 0) { alert('ما في بيانات للتصدير'); return; }
 
-    const govLabel = document.getElementById('govFilter').value || 'كل المحافظات';
+    const govLabel = getCurrentGovLabel();
     const exportBtn = document.getElementById('exportBtn');
     const originalLabel = exportBtn.textContent;
     exportBtn.textContent = 'جاري التجهيز...';
@@ -422,6 +461,102 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
     } finally {
         exportBtn.textContent = originalLabel;
         exportBtn.disabled = false;
+    }
+});
+
+document.getElementById('exportPdfBtn').addEventListener('click', async () => {
+    if (shownRows.length === 0) { alert('ما في بيانات للتصدير'); return; }
+
+    const govLabel = getCurrentGovLabel();
+    const pdfBtn = document.getElementById('exportPdfBtn');
+    const originalLabel = pdfBtn.textContent;
+    pdfBtn.textContent = 'جاري التجهيز...';
+    pdfBtn.disabled = true;
+
+    try {
+        const headers = ['رقم التسجيل','الاسم','الجنس','رقم الهوية','تاريخ الميلاد','الحالة الاجتماعية','المحافظة','الشهادة','التخصص','شارك بمعارض','نبذة عن الفنان','السكن الأصلي','مكان النزوح','رقم التواصل','رقم بديل','واتساب','السيرة الذاتية','الموافقة','تاريخ التسجيل'];
+        const nowStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const cell = (v) => { const s = esc(v); return s ? s : '—'; };
+
+        const rowsHtml = shownRows.map(r => `<tr>
+                <td class="pdf-ref">${cell(r.refNumber)}</td>
+                <td>${cell(r.name)}</td>
+                <td>${cell(r.gender)}</td>
+                <td>${cell(fixLeadingZero(r.idNumber, 9))}</td>
+                <td>${formatDOB(r.dob)}</td>
+                <td>${cell(r.maritalStatus)}</td>
+                <td class="pdf-gov">${cell(r.governorate)}</td>
+                <td>${cell(r.degree)}</td>
+                <td>${cell(r.specialty)}</td>
+                <td class="${r.exhibited === 'نعم' ? 'pdf-yes' : 'pdf-no'}">${cell(r.exhibited)}</td>
+                <td>${cell(r.bio)}</td>
+                <td>${cell(r.originalPlace)}</td>
+                <td>${cell(r.currentPlace)}</td>
+                <td>${cell(fixLeadingZero(r.phone, 10))}</td>
+                <td>${cell(fixLeadingZero(r.altPhone, 10))}</td>
+                <td>${cell(r.whatsapp)}</td>
+                <td>${r.cvUrl ? 'عرض السيرة' : '—'}</td>
+                <td class="${r.consent === 'نعم' ? 'pdf-yes' : 'pdf-no'}">${cell(r.consent)}</td>
+                <td>${fmtDate(r.date)}</td>
+            </tr>`).join('');
+
+        const printArea = document.getElementById('pdfPrintArea');
+        printArea.innerHTML = `
+            <div class="pdf-title">باليتنا للفنون البصرية — سجل الأعضاء</div>
+            <div class="pdf-sub">النطاق: ${esc(govLabel)}&nbsp;&nbsp;|&nbsp;&nbsp;عدد الأعضاء: ${shownRows.length}&nbsp;&nbsp;|&nbsp;&nbsp;تاريخ التصدير: ${nowStr}</div>
+            <table>
+                <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        `;
+
+        if (document.fonts && document.fonts.ready) { await document.fonts.ready; }
+        await new Promise((r) => setTimeout(r, 120));
+
+        const canvas = await html2canvas(printArea, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a3' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 20;
+        const usableWidth = pageWidth - margin * 2;
+        const usableHeight = pageHeight - margin * 2;
+
+        const imgWidthPx = canvas.width;
+        const imgHeightPx = canvas.height;
+        const pxToPt = usableWidth / imgWidthPx;
+        const pageHeightPx = usableHeight / pxToPt;
+
+        let renderedHeightPx = 0;
+        let pageIndex = 0;
+
+        while (renderedHeightPx < imgHeightPx) {
+            const sliceHeightPx = Math.min(pageHeightPx, imgHeightPx - renderedHeightPx);
+            const sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = imgWidthPx;
+            sliceCanvas.height = sliceHeightPx;
+            const ctx = sliceCanvas.getContext('2d');
+            ctx.drawImage(canvas, 0, renderedHeightPx, imgWidthPx, sliceHeightPx, 0, 0, imgWidthPx, sliceHeightPx);
+            const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+
+            if (pageIndex > 0) pdf.addPage();
+            pdf.addImage(sliceData, 'JPEG', margin, margin, usableWidth, sliceHeightPx * pxToPt);
+
+            renderedHeightPx += sliceHeightPx;
+            pageIndex++;
+        }
+
+        const govFileTag = govLabel === 'كل المحافظات' ? 'جميع_المحافظات' : govLabel.replace(/\s+/g, '_');
+        pdf.save(`سجل_الأعضاء_${govFileTag}_${new Date().toISOString().slice(0,10)}.pdf`);
+
+        printArea.innerHTML = '';
+    } catch (err) {
+        alert('حدث خطأ أثناء إنشاء ملف PDF، حاول مرة ثانية');
+    } finally {
+        pdfBtn.textContent = originalLabel;
+        pdfBtn.disabled = false;
     }
 });
 </script>

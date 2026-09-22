@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة إدارة - باليتا للفنون البصرية</title>
+<title>لوحة إدارة - باليتنا للفنون البصرية</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -80,7 +80,7 @@
 <div class="lock-wrap" id="lockWrap">
   <div class="lock-card">
     <h1>لوحة الإدارة</h1>
-    <p>باليتا للفنون البصرية<br>هذه المنطقة خاصة بإدارة الجمعية فقط.</p>
+    <p>باليتنا للفنون البصرية<br>هذه المنطقة خاصة بإدارة الجمعية فقط.</p>
     <input type="password" id="secretInput" placeholder="كلمة المرور">
     <button id="loginBtn">دخول</button>
     <div class="lock-err" id="lockErr"></div>
@@ -91,7 +91,7 @@
   <div class="dash-top">
     <div>
       <h1>سجل الأعضاء</h1>
-      <div class="sub">باليتا للفنون البصرية — قطاع غزة</div>
+      <div class="sub">باليتنا للفنون البصرية — قطاع غزة</div>
     </div>
     <span class="count-pill" id="countPill">0 عضو</span>
   </div>
@@ -183,6 +183,34 @@ function fmtDate(iso) {
     try { const d = new Date(iso); return d.toLocaleDateString('ar-EG', {year:'numeric',month:'short',day:'numeric'}); }
     catch { return iso; }
 }
+// تنسيق تاريخ الميلاد: يتعامل مع النص العادي (DD/MM/YYYY) ومع القيم القديمة
+// اللي حوّلها جوجل شيتس تلقائيًا لتاريخ (وطلعت كـ ISO timestamp بسبب فارق التوقيت)
+function formatDOB(raw) {
+    if (!raw) return '—';
+    const s = String(raw).trim();
+    const plain = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (plain) {
+        return `${plain[1].padStart(2,'0')}/${plain[2].padStart(2,'0')}/${plain[3]}`;
+    }
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):/);
+    if (iso) {
+        let y = parseInt(iso[1], 10), m = parseInt(iso[2], 10), d = parseInt(iso[3], 10);
+        const h = parseInt(iso[4], 10);
+        if (h >= 12) {
+            const utc = new Date(Date.UTC(y, m - 1, d));
+            utc.setUTCDate(utc.getUTCDate() + 1);
+            y = utc.getUTCFullYear(); m = utc.getUTCMonth() + 1; d = utc.getUTCDate();
+        }
+        return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+    }
+    return s;
+}
+// إصلاح احتياطي لصفر بداية مفقود (رقم هوية أو جوال جوجل شيتس حوّله لرقم وحذف الصفر)
+function fixLeadingZero(val, expectedLength) {
+    const s = String(val || '').trim();
+    if (/^\d+$/.test(s) && s.length === expectedLength - 1) return '0' + s;
+    return s;
+}
 function dash(val) {
     const s = esc(val);
     return s ? s : '<span class="muted">—</span>';
@@ -207,8 +235,8 @@ function renderTable(rows) {
             <td class="ref-tag">${dash(r.refNumber)}</td>
             <td>${dash(r.name)}</td>
             <td>${dash(r.gender)}</td>
-            <td>${dash(r.idNumber)}</td>
-            <td>${dash(r.dob)}</td>
+            <td>${dash(fixLeadingZero(r.idNumber, 9))}</td>
+            <td>${formatDOB(r.dob)}</td>
             <td>${dash(r.maritalStatus)}</td>
             <td>${r.governorate ? '<span class="badge badge-gov">' + esc(r.governorate) + '</span>' : '<span class="muted">—</span>'}</td>
             <td>${dash(r.degree)}</td>
@@ -217,8 +245,8 @@ function renderTable(rows) {
             <td class="bio-cell" title="${esc(r.bio)}">${dash(r.bio)}</td>
             <td>${dash(r.originalPlace)}</td>
             <td>${dash(r.currentPlace)}</td>
-            <td>${dash(r.phone)}</td>
-            <td>${dash(r.altPhone)}</td>
+            <td>${dash(fixLeadingZero(r.phone, 10))}</td>
+            <td>${dash(fixLeadingZero(r.altPhone, 10))}</td>
             <td>${dash(r.whatsapp)}</td>
             <td>${r.cvUrl ? '<a class="cv-link" href="' + esc(r.cvUrl) + '" target="_blank" rel="noopener">📄 عرض</a>' : '<span class="muted">—</span>'}</td>
             <td>${yesNoBadge(r.consent)}</td>
@@ -281,7 +309,6 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
 
         sheet.columns = headers.map((h, i) => ({ width: colWidths[i] }));
 
-        // ===== صف العنوان الرئيسي =====
         sheet.mergeCells(1, 1, 1, headers.length);
         const titleCell = sheet.getCell(1, 1);
         titleCell.value = 'باليتنا للفنون البصرية — سجل الأعضاء';
@@ -290,7 +317,6 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
         titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBF3DF' } };
         sheet.getRow(1).height = 30;
 
-        // ===== صف معلومات التصدير =====
         sheet.mergeCells(2, 1, 2, headers.length);
         const subCell = sheet.getCell(2, 1);
         const nowStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -300,10 +326,8 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
         subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF7F4' } };
         sheet.getRow(2).height = 22;
 
-        // صف فاصل فارغ
         sheet.getRow(3).height = 6;
 
-        // ===== صف رؤوس الأعمدة =====
         const headerRowIndex = 4;
         const headerRow = sheet.getRow(headerRowIndex);
         headerRow.values = headers;
@@ -320,16 +344,15 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
             };
         });
 
-        // ===== صفوف البيانات =====
         const thinBorder = { style: 'thin', color: { argb: 'FFD9D2C4' } };
         const fullBorder = { top: thinBorder, left: thinBorder, bottom: thinBorder, right: thinBorder };
 
         shownRows.forEach((r, idx) => {
             const rowIndex = headerRowIndex + 1 + idx;
             const rowValues = [
-                r.refNumber, r.name, r.gender, r.idNumber, r.dob, r.maritalStatus,
+                r.refNumber, r.name, r.gender, fixLeadingZero(r.idNumber, 9), formatDOB(r.dob), r.maritalStatus,
                 r.governorate, r.degree, r.specialty, r.exhibited, r.bio,
-                r.originalPlace, r.currentPlace, r.phone, r.altPhone, r.whatsapp,
+                r.originalPlace, r.currentPlace, fixLeadingZero(r.phone, 10), fixLeadingZero(r.altPhone, 10), r.whatsapp,
                 r.cvUrl ? 'عرض السيرة' : '—', r.consent, fmtDate(r.date)
             ];
             const row = sheet.getRow(rowIndex);
@@ -345,7 +368,6 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: stripeColor } };
             });
 
-            // شارة المحافظة (عمود 7)
             const govCell = row.getCell(7);
             if (r.governorate) {
                 govCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCEEE8' } };
@@ -353,7 +375,6 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
                 govCell.alignment = { horizontal: 'center', vertical: 'middle' };
             }
 
-            // شارك بمعارض (عمود 10) والموافقة (عمود 18) - نعم/لا ملوّنة
             [10, 18].forEach((colNum) => {
                 const c = row.getCell(colNum);
                 const v = String(c.value || '').trim();
@@ -366,7 +387,6 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
                 }
             });
 
-            // رابط السيرة الذاتية (عمود 17) كرابط حقيقي قابل للنقر
             if (r.cvUrl) {
                 const cvCell = row.getCell(17);
                 cvCell.value = { text: 'عرض السيرة', hyperlink: r.cvUrl };
@@ -374,13 +394,16 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
                 cvCell.alignment = { horizontal: 'center', vertical: 'middle' };
             }
 
-            // رقم التسجيل (عمود 1) بخط مميز
             const refCell = row.getCell(1);
             refCell.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FFB8860B' } };
             refCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            // تنسيق عمود رقم الهوية وتاريخ الميلاد ورقم التواصل كنص (يمنع اكسل من تحويلها لرقم/تاريخ)
+            [4, 5, 14, 15].forEach((colNum) => {
+                row.getCell(colNum).numFmt = '@';
+            });
         });
 
-        // إطار خارجي عريض حول رأس الجدول بالكامل
         sheet.getRow(headerRowIndex).eachCell((cell) => {
             cell.border = { ...cell.border, bottom: { style: 'medium', color: { argb: 'FF1D4B40' } } };
         });

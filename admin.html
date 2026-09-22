@@ -36,6 +36,8 @@
   .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
   .toolbar input[type=text]{ flex:1; min-width:200px; padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg-input); font-family:'Cairo',sans-serif; font-size:0.9rem; outline:none; }
   .toolbar input[type=text]:focus{ border-color:var(--accent-gold); }
+  .toolbar select{ padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg-input); font-family:'Cairo',sans-serif; font-size:0.9rem; outline:none; color:var(--text-primary); cursor:pointer; }
+  .toolbar select:focus{ border-color:var(--accent-gold); }
   .toolbar button{ padding:10px 18px; border-radius:10px; border:1.5px solid var(--border); background:#fff; font-family:'Cairo',sans-serif; font-size:0.87rem; cursor:pointer; color:var(--text-secondary); transition:all .2s ease; }
   .toolbar button:hover{ border-color:var(--accent-gold); color:var(--accent-gold); }
   .toolbar button.primary{ background:var(--accent-teal); border-color:var(--accent-teal); color:#fff; }
@@ -94,7 +96,16 @@
     <span class="count-pill" id="countPill">0 عضو</span>
   </div>
   <div class="toolbar">
-    <input type="text" id="searchBox" placeholder="بحث بالاسم أو رقم الهوية أو رقم التسجيل أو المحافظة">
+    <input type="text" id="searchBox" placeholder="بحث بالاسم أو رقم الهوية أو رقم التسجيل">
+    <select id="govFilter">
+      <option value="">كل المحافظات</option>
+      <option value="شمال غزة">شمال غزة</option>
+      <option value="غرب غزة">غرب غزة</option>
+      <option value="شرق غزة">شرق غزة</option>
+      <option value="الوسطى">الوسطى</option>
+      <option value="خانيونس">خانيونس</option>
+      <option value="رفح">رفح</option>
+    </select>
     <button id="refreshBtn">تحديث</button>
     <button class="primary" id="exportBtn">تصدير CSV</button>
   </div>
@@ -155,7 +166,7 @@ async function reloadData() {
     try {
         const data = await jsonpFetch(GOOGLE_SCRIPT_URL + '?action=list&secret=' + encodeURIComponent(currentSecret));
         allRows = (data && data.rows) ? data.rows : [];
-        renderTable(allRows);
+        applyFilters();
     } catch (err) {
         document.getElementById('tableArea').innerHTML = '<div class="empty-state">تعذّر تحميل البيانات، حاول مرة ثانية.</div>';
     }
@@ -225,17 +236,24 @@ function renderTable(rows) {
     `;
 }
 
-document.getElementById('searchBox').addEventListener('input', (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    if (!q) { renderTable(allRows); return; }
-    renderTable(allRows.filter(r =>
-        String(r.name || '').toLowerCase().includes(q) ||
-        String(r.idNumber || '').toLowerCase().includes(q) ||
-        String(r.refNumber || '').toLowerCase().includes(q) ||
-        String(r.originalPlace || '').toLowerCase().includes(q) ||
-        String(r.governorate || '').toLowerCase().includes(q)
-    ));
-});
+function applyFilters() {
+    const q = document.getElementById('searchBox').value.trim().toLowerCase();
+    const gov = document.getElementById('govFilter').value;
+    let rows = allRows;
+    if (gov) {
+        rows = rows.filter(r => String(r.governorate || '') === gov);
+    }
+    if (q) {
+        rows = rows.filter(r =>
+            String(r.name || '').toLowerCase().includes(q) ||
+            String(r.idNumber || '').toLowerCase().includes(q) ||
+            String(r.refNumber || '').toLowerCase().includes(q)
+        );
+    }
+    renderTable(rows);
+}
+document.getElementById('searchBox').addEventListener('input', applyFilters);
+document.getElementById('govFilter').addEventListener('change', applyFilters);
 
 document.getElementById('exportBtn').addEventListener('click', () => {
     if (allRows.length === 0) { alert('ما في بيانات للتصدير'); return; }

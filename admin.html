@@ -107,13 +107,14 @@
       <option value="رفح">رفح</option>
     </select>
     <button id="refreshBtn">تحديث</button>
-    <button class="primary" id="exportBtn">تصدير CSV</button>
+    <button class="primary" id="exportBtn">تصدير Excel</button>
   </div>
   <div class="table-wrap">
     <div id="tableArea"><div class="loading-state">جاري التحميل...</div></div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script>
 // ------- حط هون نفس رابط الاستمارة ونفس كلمة السر يلي بالكود -------
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2RrXRIzBPJMQj50JHydkw3Si05DJPp5CPsCIp9pV4J3zaAco43_ZhXcEiAv5PgXrLUg/exec';
@@ -121,6 +122,7 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2RrXRIzBPJM
 
 let currentSecret = '';
 let allRows = [];
+let shownRows = [];
 
 function jsonpFetch(url) {
     return new Promise((resolve, reject) => {
@@ -193,6 +195,7 @@ function yesNoBadge(val) {
 }
 
 function renderTable(rows) {
+    shownRows = rows;
     document.getElementById('countPill').textContent = rows.length + ' عضو';
     const area = document.getElementById('tableArea');
     if (rows.length === 0) {
@@ -255,19 +258,148 @@ function applyFilters() {
 document.getElementById('searchBox').addEventListener('input', applyFilters);
 document.getElementById('govFilter').addEventListener('change', applyFilters);
 
-document.getElementById('exportBtn').addEventListener('click', () => {
-    if (allRows.length === 0) { alert('ما في بيانات للتصدير'); return; }
-    const headers = ['رقم التسجيل','الاسم','الجنس','رقم الهوية','تاريخ الميلاد','الحالة الاجتماعية','المحافظة','الشهادة','التخصص','شارك بمعارض','نبذة عن الفنان','السكن الأصلي','مكان النزوح','رقم التواصل','رقم بديل','واتساب','رابط السيرة الذاتية','الموافقة','تاريخ التسجيل'];
-    const dataRows = allRows.map(r => [r.refNumber, r.name, r.gender, r.idNumber, r.dob, r.maritalStatus, r.governorate, r.degree, r.specialty, r.exhibited, r.bio, r.originalPlace, r.currentPlace, r.phone, r.altPhone, r.whatsapp, r.cvUrl, r.consent, r.date]);
-    let csv = '\uFEFF' + headers.join(',') + '\n' + dataRows.map(row =>
-        row.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')
-    ).join('\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'artists_members_' + new Date().toISOString().slice(0,10) + '.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+document.getElementById('exportBtn').addEventListener('click', async () => {
+    if (shownRows.length === 0) { alert('ما في بيانات للتصدير'); return; }
+
+    const govLabel = document.getElementById('govFilter').value || 'كل المحافظات';
+    const exportBtn = document.getElementById('exportBtn');
+    const originalLabel = exportBtn.textContent;
+    exportBtn.textContent = 'جاري التجهيز...';
+    exportBtn.disabled = true;
+
+    try {
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'باليتنا للفنون البصرية';
+        workbook.created = new Date();
+
+        const sheet = workbook.addWorksheet('سجل الأعضاء', {
+            views: [{ rightToLeft: true, state: 'frozen', ySplit: 4 }]
+        });
+
+        const headers = ['رقم التسجيل','الاسم','الجنس','رقم الهوية','تاريخ الميلاد','الحالة الاجتماعية','المحافظة','الشهادة','التخصص','شارك بمعارض','نبذة عن الفنان','السكن الأصلي','مكان النزوح','رقم التواصل','رقم بديل','واتساب','السيرة الذاتية','الموافقة','تاريخ التسجيل'];
+        const colWidths = [14, 22, 8, 13, 13, 15, 13, 15, 18, 13, 42, 18, 18, 14, 14, 16, 12, 10, 14];
+
+        sheet.columns = headers.map((h, i) => ({ width: colWidths[i] }));
+
+        // ===== صف العنوان الرئيسي =====
+        sheet.mergeCells(1, 1, 1, headers.length);
+        const titleCell = sheet.getCell(1, 1);
+        titleCell.value = 'باليتنا للفنون البصرية — سجل الأعضاء';
+        titleCell.font = { name: 'Calibri', bold: true, size: 16, color: { argb: 'FFB8860B' } };
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBF3DF' } };
+        sheet.getRow(1).height = 30;
+
+        // ===== صف معلومات التصدير =====
+        sheet.mergeCells(2, 1, 2, headers.length);
+        const subCell = sheet.getCell(2, 1);
+        const nowStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+        subCell.value = `النطاق: ${govLabel}   |   عدد الأعضاء: ${shownRows.length}   |   تاريخ التصدير: ${nowStr}`;
+        subCell.font = { name: 'Calibri', bold: true, size: 11, color: { argb: 'FF2E7D6A' } };
+        subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF7F4' } };
+        sheet.getRow(2).height = 22;
+
+        // صف فاصل فارغ
+        sheet.getRow(3).height = 6;
+
+        // ===== صف رؤوس الأعمدة =====
+        const headerRowIndex = 4;
+        const headerRow = sheet.getRow(headerRowIndex);
+        headerRow.values = headers;
+        headerRow.height = 26;
+        headerRow.eachCell((cell) => {
+            cell.font = { name: 'Calibri', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E7D6A' } };
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FF1D4B40' } },
+                left: { style: 'thin', color: { argb: 'FF1D4B40' } },
+                bottom: { style: 'medium', color: { argb: 'FF1D4B40' } },
+                right: { style: 'thin', color: { argb: 'FF1D4B40' } }
+            };
+        });
+
+        // ===== صفوف البيانات =====
+        const thinBorder = { style: 'thin', color: { argb: 'FFD9D2C4' } };
+        const fullBorder = { top: thinBorder, left: thinBorder, bottom: thinBorder, right: thinBorder };
+
+        shownRows.forEach((r, idx) => {
+            const rowIndex = headerRowIndex + 1 + idx;
+            const rowValues = [
+                r.refNumber, r.name, r.gender, r.idNumber, r.dob, r.maritalStatus,
+                r.governorate, r.degree, r.specialty, r.exhibited, r.bio,
+                r.originalPlace, r.currentPlace, r.phone, r.altPhone, r.whatsapp,
+                r.cvUrl ? 'عرض السيرة' : '—', r.consent, fmtDate(r.date)
+            ];
+            const row = sheet.getRow(rowIndex);
+            row.values = rowValues;
+            row.height = 20;
+
+            const stripeColor = idx % 2 === 0 ? 'FFFFFFFF' : 'FFFBF9F5';
+
+            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                cell.font = { name: 'Calibri', size: 10.5, color: { argb: 'FF2D2418' } };
+                cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: colNumber === 11 };
+                cell.border = fullBorder;
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: stripeColor } };
+            });
+
+            // شارة المحافظة (عمود 7)
+            const govCell = row.getCell(7);
+            if (r.governorate) {
+                govCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCEEE8' } };
+                govCell.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FF2E7D6A' } };
+                govCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            }
+
+            // شارك بمعارض (عمود 10) والموافقة (عمود 18) - نعم/لا ملوّنة
+            [10, 18].forEach((colNum) => {
+                const c = row.getCell(colNum);
+                const v = String(c.value || '').trim();
+                c.alignment = { horizontal: 'center', vertical: 'middle' };
+                if (v === 'نعم') {
+                    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDFF3E4' } };
+                    c.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FF1E7A38' } };
+                } else if (v === 'لا') {
+                    c.font = { name: 'Calibri', size: 10.5, color: { argb: 'FFA39889' } };
+                }
+            });
+
+            // رابط السيرة الذاتية (عمود 17) كرابط حقيقي قابل للنقر
+            if (r.cvUrl) {
+                const cvCell = row.getCell(17);
+                cvCell.value = { text: 'عرض السيرة', hyperlink: r.cvUrl };
+                cvCell.font = { name: 'Calibri', size: 10.5, color: { argb: 'FFB8860B' }, underline: true };
+                cvCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            }
+
+            // رقم التسجيل (عمود 1) بخط مميز
+            const refCell = row.getCell(1);
+            refCell.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FFB8860B' } };
+            refCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        });
+
+        // إطار خارجي عريض حول رأس الجدول بالكامل
+        sheet.getRow(headerRowIndex).eachCell((cell) => {
+            cell.border = { ...cell.border, bottom: { style: 'medium', color: { argb: 'FF1D4B40' } } };
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const govFileTag = govLabel === 'كل المحافظات' ? 'جميع_المحافظات' : govLabel.replace(/\s+/g, '_');
+        a.href = url;
+        a.download = `سجل_الأعضاء_${govFileTag}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert('حدث خطأ أثناء إنشاء الملف، حاول مرة ثانية');
+    } finally {
+        exportBtn.textContent = originalLabel;
+        exportBtn.disabled = false;
+    }
 });
 </script>
 </body>
